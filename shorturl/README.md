@@ -6,6 +6,31 @@
  - 提供http接口访问；
  - 将短链接重定向到原始链接； 
 
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Nginx
+    participant TC as tc_http_server C++
+    participant FDFS as FastDFS
+    participant GRPC as shorturl-server gRPC
+    participant Proxy as shorturl-proxy
+
+    Browser->>Nginx: 上传 /api/upload
+    Nginx->>TC: 反代
+    TC->>FDFS: 存文件
+    TC->>GRPC: GetShortUrl(长 URL) 可选
+    GRPC-->>TC: short_key
+
+    Browser->>Nginx: GET /p/short_key
+    Nginx->>Proxy: 反代
+    Proxy->>GRPC: GetOriginalUrl
+    GRPC-->>Proxy: 长 URL
+    Proxy-->>Browser: 302 Location
+    Browser->>Nginx: 请求长 URL
+    Nginx->>FDFS: fastdfs-nginx-module
+
+```
+
 # go开发环境安装
 
 ## 下载go安装包

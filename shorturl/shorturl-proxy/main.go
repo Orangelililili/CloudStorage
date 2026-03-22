@@ -1,3 +1,5 @@
+// shorturl-proxy：面向浏览器的 HTTP 入口（Gin）。/p/:key 公网短链重定向，/u/:key 用户私有短链；
+// 内部再 gRPC 调用 shorturl-server 取原始 URL。Nginx 将 /p/ 反代到本服务端口（如 8082）。
 package main
 
 import (

@@ -1,10 +1,8 @@
 /*
- * @Author: your name
- * @Date: 2019-12-07 10:54:57
- * @LastEditTime : 2020-01-10 16:35:13
- * @LastEditors  : Please set LastEditors
- * @Description: In User Settings Edit
- * @FilePath: \src\cache_pool\cache_pool.h
+ * cache_pool.h / cache_pool.cc —— 基于 hiredis 的 Redis 连接池
+ *
+ * 配置项 CacheInstances（如 token、ranking_list）各对应一个 CachePool。
+ * CacheConn 封装 get/set/hget/lpush 等；与 mysql 池一样「借连接 → 用 → 还」。
  */
 #ifndef CACHEPOOL_H_
 #define CACHEPOOL_H_

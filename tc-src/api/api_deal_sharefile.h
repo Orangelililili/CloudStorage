@@ -1,3 +1,6 @@
+/*
+ * api_deal_sharefile —— /api/dealsharefile：对「已分享」文件的取消分享、浏览计数等
+ */
 #ifndef _API_DEALSHAREFILE_H_
 #define _API_DEALSHAREFILE_H_
 #include <string>

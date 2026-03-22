@@ -1,6 +1,11 @@
 #ifndef __NETLIB_H__
 #define __NETLIB_H__
 
+/*
+ * netlib —— 对 epoll/socket 的薄封装：listen、accept、send/recv、定时器与每轮循环回调
+ * main.cc 里 netlib_listen 注册 http_callback；netlib_eventloop 阻塞驱动整个服务。
+ */
+
 #include "ostype.h"
 
 #define NETLIB_OPT_SET_CALLBACK 1

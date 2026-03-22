@@ -1,3 +1,4 @@
+// api_register.cc —— /api/reg：解析 JSON，插入用户表，错误码封装进 JSON 响应
 #include "api_register.h"
 #include <stdio.h>
 #include <stdlib.h>

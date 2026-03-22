@@ -1,6 +1,16 @@
 /**
+ * tc_http_server —— 图床业务 HTTP 后端（零声课程配套）
+ *
+ * 在整体架构中的位置：
+ * - 浏览器 → Nginx(80)：静态页 tc-front、/api/* 反代、大文件上传走 upload 模块落盘再转给本服务
+ * - 本进程监听 tc_http_server.conf 里的 HttpPort（如 8081），解析 HTTP，路由到 api_*.cc
+ * - MySQL：用户、文件元数据；Redis：token、计数、排行榜等；FastDFS：实际文件存储
+ * - 可选：enable_shorturl=1 时，上传分享图会通过 gRPC 调用 shorturl-server 生成短链
+ *
+ * 启动主线：读配置 → 初始化日志/连接池 → Api*Init → netlib(epoll) 监听 → 事件循环
+ *
  * 头文件包含规范
- * 1.本类的声明（第一个包含本类h文件，有效减少以来）
+ * 1.本类的声明（第一个包含本类h文件，有效减少依赖）
  * 2.C系统文件
  * 3.C++系统文件
  * 4.其他库头文件

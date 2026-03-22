@@ -1,5 +1,6 @@
 /**
- * @brief  redis表 KEYS 值相关定义
+ * @brief  redis 中业务键名宏（与 api_*.cc 里 CacheConn 读写一一对应，改名需全局搜）
+ * 含：公共文件 ZSET、文件名映射 HASH、各类计数器前缀等。
  */
 
 #ifndef _REDIS_KEYS_H_

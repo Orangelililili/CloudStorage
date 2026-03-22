@@ -1,3 +1,4 @@
+// data：短链表访问层。url_map（公共）与 url_map_user（用户）两张表由工厂按表名注入。
 package data
 
 import (

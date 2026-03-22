@@ -1,5 +1,7 @@
 /**
- * 本文件对http解析器的封装
+ * http_parser_wrapper —— 基于 http_parser 库，从原始 TCP 缓冲里拆出
+ * 请求行 URL、Header、Body（含 Content-Length / chunked 的简单场景）。
+ * CHttpConn::OnRead 在 IsReadAll() 为真后取 GetUrl()、GetBodyContent() 做路由。
  */
 #ifndef _HTTP_PARSER_WRAPPER_H_
 #define _HTTP_PARSER_WRAPPER_H_

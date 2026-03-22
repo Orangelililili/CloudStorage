@@ -1,3 +1,5 @@
+// shorturl-crontab：独立小进程，定时把 url_map / url_map_user 表当前最大 id 同步到 Redis，
+// 供发号、去重等逻辑使用（与 shorturl-server 共用一套键设计）。
 package main
 
 import (

@@ -12,6 +12,7 @@ import (
 
 const DefaultUrlMapTTL = 86400 * 31
 
+// setUrlMapMaxID：查询各表 MAX(id) 写入 Redis（带 TTL），供发号侧读取。
 func setUrlMapMaxID() {
 	tables := []string{"url_map", "url_map_user"}
 

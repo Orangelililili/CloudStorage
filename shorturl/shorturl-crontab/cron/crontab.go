@@ -1,3 +1,4 @@
+// cron：定时任务调度（robfig/cron）。默认每天 0 点刷新 Redis 中的 max id 缓存。
 package cron
 
 import (

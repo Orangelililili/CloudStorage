@@ -1,3 +1,10 @@
+/*
+ * api_common.h / api_common.cc —— 各 API 模块共用的工具与初始化
+ *
+ * - ApiInit：服务启动时把 MySQL 中的统计类数据预热进 Redis（如共享文件总数）
+ * - Cache*Count：对 Redis 中计数器做读写、自增自减（文件数、分享数等）
+ * - 另见 api_common.cc：FastDFS 命令、字符串工具、DB 查询封装等
+ */
 #ifndef _API_COMMON_H_
 #define _API_COMMON_H_
 #include "cache_pool.h"

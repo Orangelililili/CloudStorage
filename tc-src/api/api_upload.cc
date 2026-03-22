@@ -1,3 +1,4 @@
+// api_upload.cc —— /api/upload：读 nginx 落盘路径 → FastDFS storage_upload → 写 MySQL → 可选短链（见头文件说明）
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>

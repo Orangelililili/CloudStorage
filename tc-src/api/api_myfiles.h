@@ -1,3 +1,6 @@
+/*
+ * api_myfiles —— /api/myfiles：分页列出当前用户已上传文件
+ */
 #ifndef _API_MYFILES_H_
 #define _API_MYFILES_H_
 #include "api_common.h"

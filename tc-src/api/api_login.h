@@ -1,3 +1,6 @@
+/*
+ * api_login —— /api/login：校验账号密码，签发 token，并把用户文件数等写入 Redis
+ */
 #ifndef _API_LOGIN_H_
 #define _API_LOGIN_H_
 #include "api_common.h"

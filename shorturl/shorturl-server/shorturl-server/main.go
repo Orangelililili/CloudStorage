@@ -1,3 +1,5 @@
+// shorturl-server：短链 gRPC 服务端。维护长 URL ↔ 短 key（MySQL），热点走 Redis 缓存；
+// C++ 图床在 enable_shorturl=1 时通过 gRPC 调用此处生成/解析短链。
 package main
 
 import (

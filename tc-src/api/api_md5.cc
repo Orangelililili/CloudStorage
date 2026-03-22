@@ -1,3 +1,4 @@
+// api_md5.cc —— /api/md5：按 user + md5 查 file_info / 用户文件关联，判断秒传
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

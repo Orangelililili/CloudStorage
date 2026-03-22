@@ -1,3 +1,6 @@
+/*
+ * api_md5 —— /api/md5：按用户+文件 MD5 查是否已存在，用于秒传判断
+ */
 #ifndef _API_MD5_H_
 #define _API_MD5_H_
 #include <string>

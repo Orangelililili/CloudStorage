@@ -1,3 +1,6 @@
+/*
+ * api_register —— /api/reg 用户注册（多线程版通过 conn_uuid 回写响应）
+ */
 #ifndef _API_REGISTER_H_
 #define _API_REGISTER_H_
 #include "api_common.h"

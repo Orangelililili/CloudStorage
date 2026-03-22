@@ -1,3 +1,4 @@
+// data：crontab 专用，仅封装按表名查询 MAX(id)，供同步到 Redis。
 package data
 
 import (

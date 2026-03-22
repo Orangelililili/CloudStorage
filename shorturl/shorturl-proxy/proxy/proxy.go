@@ -1,3 +1,4 @@
+// proxy：Gin 处理器。根据短 key 调 gRPC 取长链，再 302 跳转（便于统计访问；301 会绕过代理）。
 package proxy
 
 import (

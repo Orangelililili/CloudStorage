@@ -1,3 +1,5 @@
+// interceptor：gRPC 一元/流式拦截器。除 health check 外校验 metadata 中的 Bearer token，
+// 与 tc_http_server.conf 里 shorturl_server_access_token 一致。
 package interceptor
 
 import (

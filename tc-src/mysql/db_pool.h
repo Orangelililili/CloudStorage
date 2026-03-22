@@ -1,6 +1,13 @@
 #ifndef DBPOOL_H_
 #define DBPOOL_H_
 
+/*
+ * db_pool.h / db_pool.cc —— MySQL 连接池（按配置里 DBInstances 建多个池，如 master/slave）
+ *
+ * CDBManager 单例：GetDBConn("tuchuang_master") 取连接；用完通过宏还回池子。
+ * 上层 api 里写操作用 master，只读查询可用 slave，避免单点打满。
+ */
+
 #include <condition_variable>
 #include <iostream>
 #include <list>

@@ -1,3 +1,4 @@
+// api_login.cc —— /api/login：查库验证、生成 token、预热 Redis 中用户文件/分享计数
 #include "api_login.h"
 
 #include <stdio.h>

@@ -1,7 +1,11 @@
 /*
+ * event_dispatch —— 单例事件分发器（epoll/select 等），Reactor 核心
+ *
  * A socket event dispatcher, features include:
  * 1. portable: worked both on Windows, MAC OS X,  LINUX platform
  * 2. a singleton pattern: only one instance of this class can exist
+ *
+ * netlib 内部会调用这里的 AddEvent / StartDispatch，驱动读写在单线程里回调。
  */
 #ifndef __EVENT_DISPATCH_H__
 #define __EVENT_DISPATCH_H__

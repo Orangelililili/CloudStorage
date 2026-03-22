@@ -1,5 +1,13 @@
 /*
- * http_conn.h
+ * http_conn.h —— 单条 TCP 连接上的 HTTP 会话（Reactor 线程里读请求，必要时丢给线程池）
+ *
+ * 职责概要：
+ * - OnConnect / OnRead / OnWrite：与 netlib(epoll) 配合，收齐一次 HTTP 请求后解析 URL+Body
+ * - 按 URL 前缀分发到 _Handle*Request，再调用各 api_*.cc 中的业务函数
+ * - 多线程接口：工作线程通过 AddResponseData 把 JSON 放进队列，主线程在 http_loop_callback
+ *   里调用 SendResponseDataList，按 conn_uuid 找回 CHttpConn 再 Send（避免在子线程里直接写 socket）
+ *
+ * 连接生命周期：一般「请求-响应-关闭」，写完后 OnWriteComlete → Close；超时由 OnTimer 关闭。
  *
  *  Created on: 2013-9-29
  *      Author: ziteng

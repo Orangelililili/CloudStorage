@@ -1,6 +1,11 @@
 #ifndef _TC_THREAD_POOL_H_
 #define _TC_THREAD_POOL_H_
 
+/*
+ * ThreadPool：C++11 线程池。http_conn.cc 里全局 g_thread_pool，
+ * 把 ApiRegisterUser / ApiUserLogin 等慢任务从 epoll 线程里挪走，避免阻塞网络。
+ */
+
 #include <functional>
 #include <future>
 #include <iostream>

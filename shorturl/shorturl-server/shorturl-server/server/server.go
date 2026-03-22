@@ -1,3 +1,4 @@
+// server：实现 proto.ShortUrlServer（GetShortUrl / GetOriginalUrl 等），组合 data 层与 cache 工厂。
 package server
 
 import (

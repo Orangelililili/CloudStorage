@@ -1,3 +1,4 @@
+// api_sharepicture.cc —— /api/sharepic：创建分享 token、分享页数据、计数与 Redis 维护
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

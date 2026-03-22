@@ -1,4 +1,17 @@
 /*
+ * http_conn.cc —— CHttpConn 实现：URL 路由表 + 同步/异步两种调用业务的方式
+ *
+ * 路由与 api 对应关系（与 nginx location 一致，前缀匹配）：
+ *   /api/reg           → ApiRegisterUser（默认线程池）
+ *   /api/login         → ApiUserLogin（由 API_LOGIN_MUTIL_THREAD 控制是否线程池）
+ *   /api/myfiles       → ApiMyfiles（由 API_MYFILES_MUTIL_THREAD 控制）
+ *   /api/sharefiles    → ApiSharefiles
+ *   /api/dealfile      → ApiDealfile（删/下载等文件操作）
+ *   /api/dealsharefile → ApiDealsharefile
+ *   /api/sharepic      → ApiSharepicture
+ *   /api/md5           → ApiMd5（秒传前校验）
+ *   /api/upload        → ApiUpload（Body 多为 nginx upload 模块改写后的字段）
+ *
  * HttpConn.cpp
  *  Modify on: 2022-10-30
  * 		Author: darren
@@ -208,13 +221,14 @@ void CHttpConn::OnRead() // CHttpConn业务层面的OnRead
         return;
     }
 
-    LogDebug("buf_len: {}, conn_handle_: {}, in_buf: {}", buf_len, conn_handle_, in_buf);
+        LogDebug("buf_len: {}, conn_handle_: {}, in_buf: {}", buf_len, conn_handle_, in_buf);
     // 解析http数据
     http_parser_.ParseHttpContent(in_buf, buf_len); // 1. 从socket接口读取数据；2.然后把数据放到buffer in_buf; 3.http解析
     if (http_parser_.IsReadAll()) {
         string url = http_parser_.GetUrl();
         string content = http_parser_.GetBodyContent();
         LogInfo("url: {}", url);                     // for debug
+        // ---- HTTP API 路由（与 nginx 中 proxy_pass 到本端口的 location 一一对应）----
         if (strncmp(url.c_str(), "/api/reg", 8) == 0) { // 注册  url 路由。 根据根据url快速找到对应的处理函数， 能不能使用map，hash
             _HandleRegisterRequest(url, content);
         } else if (strncmp(url.c_str(), "/api/login", 10) == 0) { // 登录

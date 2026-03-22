@@ -1,3 +1,4 @@
+# 图床业务库 0voice_tuchuang：用户、文件元数据、分享、下载记录等（与 tc_http_server.conf 中 dbname 对应）
 #数据库表
 #创建数据库
 DROP DATABASE IF EXISTS `0voice_tuchuang`;

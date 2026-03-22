@@ -1,3 +1,6 @@
+/*
+ * api_upload —— 处理 /api/upload：把已落地临时文件上传到 FastDFS，写 MySQL，可选申请短链
+ */
 #ifndef _APIUPLOAD_H_
 #define _APIUPLOAD_H_
 #include <string>
