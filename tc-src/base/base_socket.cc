@@ -46,7 +46,7 @@ int CBaseSocket::Listen(const char *server_ip, uint16_t port,
     //创建socket
     socket_ = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_ == INVALID_SOCKET) {
-        printf("socket failed, err_code=%d, server_ip=%s, port=%u",
+        printf("socket failed, err_code=%d, server_ip=%s, port=%u\n",
                _GetErrorCode(), server_ip, port);
         return NETLIB_ERROR;
     }
@@ -60,7 +60,7 @@ int CBaseSocket::Listen(const char *server_ip, uint16_t port,
     _SetAddr(server_ip, port, &serv_addr);//设置地址
     int ret = ::bind(socket_, (sockaddr *)&serv_addr, sizeof(serv_addr));
     if (ret == SOCKET_ERROR) {
-        printf("bind failed, err_code=%d, server_ip=%s, port=%u",
+        printf("bind failed, err_code=%d, server_ip=%s, port=%u\n",
                _GetErrorCode(), server_ip, port);
         closesocket(socket_);
         return NETLIB_ERROR;
@@ -68,7 +68,7 @@ int CBaseSocket::Listen(const char *server_ip, uint16_t port,
 
     ret = listen(socket_, 64);//监听端口
     if (ret == SOCKET_ERROR) {
-        printf("listen failed, err_code=%d, server_ip=%s, port=%u",
+        printf("listen failed, err_code=%d, server_ip=%s, port=%u\n",
                _GetErrorCode(), server_ip, port);
         closesocket(socket_);
         return NETLIB_ERROR;
@@ -76,7 +76,7 @@ int CBaseSocket::Listen(const char *server_ip, uint16_t port,
 
     state_ = SOCKET_STATE_LISTENING;
 
-    printf("CBaseSocket::Listen on %s:%d", server_ip, port);
+    printf("CBaseSocket::Listen on %s:%d\n", server_ip, port);
 
     AddBaseSocket(this);
     CEventDispatch::Instance()->AddEvent(socket_, SOCKET_READ | SOCKET_EXCEP);

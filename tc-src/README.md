@@ -42,11 +42,11 @@ sudo ./tc_http_server
 # 2 导入数据库
 
 ```
-root@iZbp1h2l856zgoegc8rvnhZ:~/0voice/tc/tuchuang$ mysql -uroot -p          #登录mysql
+mysql -uroot -p          # 登录 mysql
 
 mysql>
-mysql> source /root/tuchuang/tuchuang/0voice_tuchuang.sql;   #导入带索引的数据库，具体看自己存放的路径
-mysql> source /root/tuchuang/tuchuang/0voice_tuchuang_noindex.sql;   #导入不带索引的数据库，具体看自己存放的路径
+mysql> source /path/to/repo/tuchuang.sql;   # 导入带前缀索引的库（与默认 tc_http_server.conf 一致）
+mysql> source /path/to/repo/tuchuang_noindex.sql;   # 导入无业务索引的库（性能对比用）
 ```
 带索引和不带索引的数据库，用于后续做性能测试，加深对索引的理解。
 
@@ -119,8 +119,8 @@ shorturl_server_access_token=e8n05nr9jey84prEhw5u43th0yi294780yjr3h7sksSdkFdDngK
 
 
 ```
-20221109 12:39:02.116297Z INFO  db_host:127.0.0.1, db_port:3306, db_dbname:0voice_tuchuang_index, db_username:root, db_password:123456 - DBPool.cpp:635
-20221109 12:39:02.137699Z INFO  db_host:127.0.0.1, db_port:3306, db_dbname:0voice_tuchuang_index, db_username:root, db_password:123456 - DBPool.cpp:635
+20221109 12:39:02.116297Z INFO  db_host:127.0.0.1, db_port:3306, db_dbname:tuchuang_index, db_username:root, db_password:123456 - DBPool.cpp:635
+20221109 12:39:02.137699Z INFO  db_host:127.0.0.1, db_port:3306, db_dbname:tuchuang_index, db_username:root, db_password:123456 - DBPool.cpp:635
 20221109 12:39:09.937993Z WARN  Reg 10000 times need the time: 7785ms, average time: 0.7785ms, qps: 1284 - TestRegister.cpp:104
 20221109 12:39:27.018825Z WARN  SEL 1000 times need the time: 17080ms, average time: 17.08ms, qps: 58
 

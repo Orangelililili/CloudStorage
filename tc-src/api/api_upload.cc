@@ -8,22 +8,192 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <cstring>
+#include <fstream>
+#include <string>
+
+// 必须在 fdfs_client.h（fastcommon）之前：shared_func.h 的 #define byte 会破坏 protobuf 头
+#include <grpcpp/grpcpp.h>
+#include "shorturl.pb.h"
+#include "shorturl.grpc.pb.h"
 
 #include "fdfs_client.h"
 
 #include "api_common.h"
 #include "api_upload.h"
 
-//grpc远程调用
-#include <grpcpp/grpcpp.h>
-#include "shorturl.pb.h"
-#include "shorturl.grpc.pb.h"
+// grpc 远程调用
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
 using shorturl_voice::ShortUrl;     //服务
 using shorturl_voice::Url;
 using shorturl_voice::ShortKey;
+
+/**
+ * 开发环境经 Python 反代时，浏览器直接 POST multipart（字段 file、user、md5、size），
+ * 无 Nginx upload 模块。本函数解析后写入临时文件并加后缀，后续仍走 uploadFileToFastDfs。
+ */
+static bool mp_disp_name(const std::string &hdr, std::string *name_out) {
+    size_t i = hdr.find("name=\"");
+    if (i == std::string::npos) {
+        return false;
+    }
+    i += 6;
+    size_t j = hdr.find('"', i);
+    if (j == std::string::npos) {
+        return false;
+    }
+    *name_out = hdr.substr(i, j - i);
+    return true;
+}
+
+static bool mp_disp_filename(const std::string &hdr, std::string *fn_out) {
+    size_t i = hdr.find("filename=\"");
+    if (i != std::string::npos) {
+        i += 10;
+        size_t j = hdr.find('"', i);
+        if (j == std::string::npos) {
+            return false;
+        }
+        *fn_out = hdr.substr(i, j - i);
+        return true;
+    }
+    i = hdr.find("filename=");
+    if (i == std::string::npos) {
+        return false;
+    }
+    i += 9;
+    while (i < hdr.size() && hdr[i] == ' ') {
+        i++;
+    }
+    if (i < hdr.size() && hdr[i] == '"') {
+        i++;
+        size_t j = hdr.find('"', i);
+        *fn_out = hdr.substr(i, j - i);
+    } else {
+        size_t j = hdr.find_first_of(";\r\n", i);
+        *fn_out = hdr.substr(i, j - i);
+    }
+    return true;
+}
+
+static void mp_trim_crlf(std::string *s) {
+    while (s->size() >= 2 && s->compare(s->size() - 2, 2, "\r\n") == 0) {
+        s->resize(s->size() - 2);
+    }
+    while (!s->empty() &&
+           ((*s)[s->size() - 1] == '\n' || (*s)[s->size() - 1] == '\r')) {
+        s->pop_back();
+    }
+}
+
+/** 成功返回 0，并写入 new_file_path（带后缀的临时文件，调用方负责 unlink） */
+static int parse_browser_multipart_to_temp(const std::string &post_data,
+                                           char *file_name, size_t file_name_len,
+                                           char *file_md5, size_t file_md5_len,
+                                           long *long_file_size, char *user,
+                                           size_t user_len, char *new_file_path,
+                                           size_t new_file_path_len) {
+    size_t le = post_data.find("\r\n");
+    if (le == std::string::npos) {
+        LogError("browser upload: no first line");
+        return -1;
+    }
+    const std::string bline = post_data.substr(0, le);
+    if (bline.size() < 2 || bline.compare(0, 2, "--") != 0) {
+        LogError("browser upload: bad boundary");
+        return -1;
+    }
+    const std::string sep = "\r\n" + bline;
+    const std::string sep_end = "\r\n" + bline + "--";
+
+    std::string f_user, f_md5, f_size, orig_fn, f_bytes;
+    size_t cur = le + 2;
+    while (cur < post_data.size()) {
+        size_t hdr_end = post_data.find("\r\n\r\n", cur);
+        if (hdr_end == std::string::npos) {
+            break;
+        }
+        const std::string headers = post_data.substr(cur, hdr_end - cur);
+        size_t body_start = hdr_end + 4;
+        size_t next_sep = post_data.find(sep, body_start);
+        size_t part_end;
+        bool has_next;
+        if (next_sep != std::string::npos) {
+            part_end = next_sep;
+            has_next = true;
+        } else {
+            size_t em = post_data.find(sep_end, body_start);
+            part_end = (em == std::string::npos) ? post_data.size() : em;
+            has_next = false;
+        }
+        std::string body = post_data.substr(body_start, part_end - body_start);
+        std::string pname;
+        if (mp_disp_name(headers, &pname)) {
+            if (pname == "file") {
+                if (!mp_disp_filename(headers, &orig_fn)) {
+                    orig_fn = "upload.bin";
+                }
+                f_bytes = std::move(body);
+            } else if (pname == "user") {
+                mp_trim_crlf(&body);
+                f_user = std::move(body);
+            } else if (pname == "md5") {
+                mp_trim_crlf(&body);
+                f_md5 = std::move(body);
+            } else if (pname == "size") {
+                mp_trim_crlf(&body);
+                f_size = std::move(body);
+            }
+        }
+        if (!has_next) {
+            break;
+        }
+        cur = next_sep + sep.size();
+    }
+    if (f_user.empty() || f_md5.empty() || orig_fn.empty() || f_bytes.empty()) {
+        LogError("browser upload: need file, user, md5 and filename");
+        return -1;
+    }
+
+    strncpy(file_name, orig_fn.c_str(), file_name_len - 1);
+    file_name[file_name_len - 1] = '\0';
+    strncpy(file_md5, f_md5.c_str(), file_md5_len - 1);
+    file_md5[file_md5_len - 1] = '\0';
+    strncpy(user, f_user.c_str(), user_len - 1);
+    user[user_len - 1] = '\0';
+
+    *long_file_size = static_cast<long>(f_bytes.size());
+    if (!f_size.empty()) {
+        *long_file_size = strtol(f_size.c_str(), nullptr, 10);
+    }
+
+    char suffix[SUFFIX_LEN] = {0};
+    GetFileSuffix(file_name, suffix);
+
+    char tmpl[] = "/tmp/tuchuang_upXXXXXX";
+    int tfd = mkstemp(tmpl);
+    if (tfd < 0) {
+        LogError("mkstemp failed: {}", strerror(errno));
+        return -1;
+    }
+    ssize_t w = write(tfd, f_bytes.data(), f_bytes.size());
+    close(tfd);
+    if (w != static_cast<ssize_t>(f_bytes.size())) {
+        LogError("write temp upload incomplete");
+        unlink(tmpl);
+        return -1;
+    }
+    snprintf(new_file_path, new_file_path_len, "%s.%s", tmpl, suffix);
+    if (rename(tmpl, new_file_path) != 0) {
+        LogError("rename temp upload: {}", strerror(errno));
+        unlink(tmpl);
+        return -1;
+    }
+    return 0;
+}
 
 //短链服务客户端
 class ShortUrlClient {
@@ -390,17 +560,12 @@ int ApiUpload(string &url, string &post_data, string &str_json) {
     char fileid[TEMP_BUF_MAX_LEN] = {0}; //文件上传到fastDFS后的文件id
     char fdfs_file_url[FILE_URL_LEN] = {0}; //文件所存放storage的host_name
     int ret = 0;
-    char boundary[TEMP_BUF_MAX_LEN] = {0}; //分界线信息
     char file_name[128] = {0};
-    char file_content_type[128] = {0};
-    char file_path[128] = {0};
-    char new_file_path[128] = {0};
+    char new_file_path[512] = {0};
     char file_md5[128] = {0};
     char file_size[32] = {0};
     long long_file_size = 0;
     char user[32] = {0};
-    char *begin = (char *)post_data.c_str();
-    char *p1, *p2;
     string short_url;   // 保存短链
     string origin_url;    //原始链接
     Json::Value value;
@@ -413,125 +578,143 @@ int ApiUpload(string &url, string &post_data, string &str_json) {
     CacheConn *cache_conn = cache_manager->GetCacheConn("token");
     AUTO_REL_CACHECONN(cache_manager, cache_conn); //自动规划连接 -》连接池
 
-    LogInfo("post_data: {}", post_data);
+    LogInfo("upload post_data len={}", post_data.size());
 
-    // 1. 解析boundary
-    // Content-Type: multipart/form-data;
-    // boundary=----WebKitFormBoundaryjWE3qXXORSg2hZiB 找到起始位置
-    p1 = strstr(begin, "\r\n"); // 作用是返回字符串中首次出现子串的地址
-    if (p1 == NULL) {
-        LogError("wrong no boundary!");
+    if (strstr(post_data.c_str(), "name=\"file_path\"") != nullptr) {
+        // Nginx ngx_http_upload_module 改写后的字段（生产典型路径）
+        char boundary[TEMP_BUF_MAX_LEN] = {0};
+        char file_content_type[128] = {0};
+        char file_path[128] = {0};
+        char *begin = (char *)post_data.c_str();
+        char *p1, *p2;
+
+        p1 = strstr(begin, "\r\n");
+        if (p1 == NULL) {
+            LogError("wrong no boundary!");
+            ret = -1;
+            goto END;
+        }
+        strncpy(boundary, begin, p1 - begin);
+        boundary[p1 - begin] = '\0';
+        LogInfo("boundary: {}", boundary);
+
+        begin = p1 + 2;
+        p2 = strstr(begin, "name=\"file_name\"");
+        if (!p2) {
+            LogError("wrong no file_name!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(begin, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(file_name, begin, p2 - begin);
+        file_name[p2 - begin] = '\0';
+        LogInfo("file_name: {}", file_name);
+
+        begin = p2 + 2;
+        p2 = strstr(begin, "name=\"file_content_type\"");
+        if (!p2) {
+            LogError("wrong no file_content_type!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(p2, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(file_content_type, begin, p2 - begin);
+        file_content_type[p2 - begin] = '\0';
+        LogInfo("file_content_type: {}", file_content_type);
+
+        begin = p2 + 2;
+        p2 = strstr(begin, "name=\"file_path\"");
+        if (!p2) {
+            LogError("wrong no file_path!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(p2, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(file_path, begin, p2 - begin);
+        file_path[p2 - begin] = '\0';
+        LogInfo("file_path: {}", file_path);
+
+        begin = p2 + 2;
+        p2 = strstr(begin, "name=\"file_md5\"");
+        if (!p2) {
+            LogError("wrong no file_md5!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(p2, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(file_md5, begin, p2 - begin);
+        file_md5[p2 - begin] = '\0';
+        LogInfo("file_md5: {}", file_md5);
+
+        begin = p2 + 2;
+        p2 = strstr(begin, "name=\"file_size\"");
+        if (!p2) {
+            LogError("wrong no file_size!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(p2, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(file_size, begin, p2 - begin);
+        file_size[p2 - begin] = '\0';
+        LogInfo("file_size: {}", file_size);
+        long_file_size = strtol(file_size, NULL, 10);
+
+        begin = p2 + 2;
+        p2 = strstr(begin, "name=\"user\"");
+        if (!p2) {
+            LogError("wrong no user!");
+            ret = -1;
+            goto END;
+        }
+        p2 = strstr(p2, "\r\n");
+        p2 += 4;
+        begin = p2;
+        p2 = strstr(begin, "\r\n");
+        strncpy(user, begin, p2 - begin);
+        user[p2 - begin] = '\0';
+        LogInfo("user: {}", user);
+
+        GetFileSuffix(file_name, suffix);
+        new_file_path[0] = '\0';
+        strcat(new_file_path, file_path);
+        strcat(new_file_path, ".");
+        strcat(new_file_path, suffix);
+        ret = rename(file_path, new_file_path);
+        if (ret < 0) {
+            LogError("rename {} to {} failed", file_path, new_file_path);
+            ret = -1;
+            goto END;
+        }
+    } else if (strstr(post_data.c_str(), "name=\"file\"") != nullptr) {
+        // 浏览器 / run-dev-8080 直传：multipart 内含 file 实体
+        if (parse_browser_multipart_to_temp(
+                post_data, file_name, sizeof(file_name), file_md5,
+                sizeof(file_md5), &long_file_size, user, sizeof(user),
+                new_file_path, sizeof(new_file_path)) != 0) {
+            ret = -1;
+            goto END;
+        }
+    } else {
+        LogError("upload: need Nginx upload fields (file_path) or browser field (file)");
         ret = -1;
         goto END;
     }
-    //拷贝分界线
-    strncpy(boundary, begin, p1 - begin); // 缓存分界线, 比如：WebKitFormBoundary88asdgewtgewx
-    boundary[p1 - begin] = '\0'; //字符串结束符
-    LogInfo("boundary: {}", boundary); //打印出来
 
-    // 查找文件名file_name 匹配字符串的算法
-    begin = p1 + 2;  // 2->\r\n
-    p2 = strstr(begin, "name=\"file_name\""); //找到file_name字段
-    if (!p2) {
-        LogError("wrong no file_name!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(begin, "\r\n"); // 找到file_name下一行
-    p2 += 4;                    //下一行起始
-    begin = p2;                 //  
-    p2 = strstr(begin, "\r\n");
-    strncpy(file_name, begin, p2 - begin);
-    LogInfo("file_name: {}", file_name);
-
-    // 查找文件类型file_content_type
-    begin = p2 + 2;
-    p2 = strstr(begin, "name=\"file_content_type\""); //
-    if (!p2) {
-        LogError("wrong no file_content_type!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(p2, "\r\n");
-    p2 += 4;
-    begin = p2;
-    p2 = strstr(begin, "\r\n");
-    strncpy(file_content_type, begin, p2 - begin);
-    LogInfo("file_content_type: {}", file_content_type);
-
-    // 查找文件file_path
-    begin = p2 + 2;
-    p2 = strstr(begin, "name=\"file_path\""); //
-    if (!p2) {
-        LogError("wrong no file_path!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(p2, "\r\n");
-    p2 += 4;
-    begin = p2;
-    p2 = strstr(begin, "\r\n");
-    strncpy(file_path, begin, p2 - begin);
-    LogInfo("file_path: {}", file_path);
-
-    // 查找文件file_md5
-    begin = p2 + 2;
-    p2 = strstr(begin, "name=\"file_md5\""); //
-    if (!p2) {
-        LogError("wrong no file_md5!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(p2, "\r\n");
-    p2 += 4;
-    begin = p2;
-    p2 = strstr(begin, "\r\n");
-    strncpy(file_md5, begin, p2 - begin);
-    LogInfo("file_md5: {}", file_md5);
-
-    // 查找文件file_size
-    begin = p2 + 2;
-    p2 = strstr(begin, "name=\"file_size\""); //
-    if (!p2) {
-        LogError("wrong no file_size!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(p2, "\r\n");
-    p2 += 4;
-    begin = p2;
-    p2 = strstr(begin, "\r\n");
-    strncpy(file_size, begin, p2 - begin);
-    LogInfo("file_size: {}", file_size);
-    long_file_size = strtol(file_size, NULL, 10); //字符串转long
-
-    // 查找user
-    begin = p2 + 2;
-    p2 = strstr(begin, "name=\"user\""); //
-    if (!p2) {
-        LogError("wrong no user!");
-        ret = -1;
-        goto END;
-    }
-    p2 = strstr(p2, "\r\n");
-    p2 += 4;
-    begin = p2;
-    p2 = strstr(begin, "\r\n");
-    strncpy(user, begin, p2 - begin);
-    LogInfo("user: {}", user);
-
-    // 获取文件名后缀
-    GetFileSuffix(file_name, suffix); //  20230720-2.txt -> txt  mp4, jpg, png
-    strcat(new_file_path, file_path); // /root/tmp/1/0045118901
-    strcat(new_file_path, ".");  // /root/tmp/1/0045118901.
-    strcat(new_file_path, suffix); // /root/tmp/1/0045118901.txt
-    // 重命名 修改文件名  fastdfs 他需要带后缀的文件
-    ret = rename(file_path, new_file_path); /// /root/tmp/1/0045118901 ->  /root/tmp/1/0045118901.txt
-    if (ret < 0) {
-        LogError("rename {} to {} failed", file_path, new_file_path);
-        ret = -1;
-        goto END;
-    }  
     //===============> 将该文件存入fastDFS中,并得到文件的file_id <============
     LogInfo("uploadFileToFastDfs, file_name:{}, new_file_path:{}", file_name, new_file_path);
     if (uploadFileToFastDfs(new_file_path, fileid) < 0) {

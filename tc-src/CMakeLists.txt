@@ -27,11 +27,23 @@ ADD_DEFINITIONS( -g -Wno-deprecated -Wno-unused-parameter -Bsymbolic -D_REENTRAN
 # find_package的作用就是去寻找该库的头文件位置、库文件位置以及库文件名称，并将其设为变量，返回提供给CMakeLists.txt其他部分使用
 # grpc相关
 find_package(Threads REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
+# Ubuntu 等发行版常只提供 FindProtobuf.cmake，无 ProtobufConfig.cmake
+find_package(Protobuf REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 
 message(STATUS "Using protobuf-${Protobuf_VERSION}")
 message(STATUS "Using gRPC-${gRPC_VERSION}")
+
+# 无系统 libmysqlclient-dev 时，可将 MariaDB Connector/C 安装到仓库根目录 .deps（见 scripts/bootstrap-deps.sh）
+set(TUCHUANG_DEPS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.deps")
+if(EXISTS "${TUCHUANG_DEPS_ROOT}/include/mariadb/mysql.h")
+    message(STATUS "MySQL C API: MariaDB connector at ${TUCHUANG_DEPS_ROOT}")
+    INCLUDE_DIRECTORIES(${TUCHUANG_DEPS_ROOT}/include/mariadb)
+    LINK_DIRECTORIES(${TUCHUANG_DEPS_ROOT}/lib/mariadb)
+    set(TUCHUANG_MYSQL_LIB mariadb)
+else()
+    set(TUCHUANG_MYSQL_LIB mysqlclient)
+endif()
 
 INCLUDE_DIRECTORIES(/usr/include/fastdfs /usr/include/fastcommon /usr/local/include/hiredis /usr/include/mysql)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/base)
@@ -49,6 +61,11 @@ LINK_DIRECTORIES(/usr/local/lib)
 ADD_EXECUTABLE(tc_http_server ${SRC_LIST} ${BASE_LIST} ${API_LIST} ${LOG_LIST}
         ${MYSQL_LIST} ${REDIS_LIST} ${JSON_LIST})
 
+if(TUCHUANG_MYSQL_LIB STREQUAL "mariadb")
+    set_target_properties(tc_http_server PROPERTIES
+            BUILD_RPATH "${TUCHUANG_DEPS_ROOT}/lib/mariadb")
+endif()
+
 # 注意添加grpc相关的库gRPC::grpc++ gRPC::grpc++_reflection protobuf::libprotobuf
-TARGET_LINK_LIBRARIES(tc_http_server pthread fdfsclient fastcommon  m mysqlclient spdlogd
-        gRPC::grpc++ gRPC::grpc++_reflection protobuf::libprotobuf) 
+TARGET_LINK_LIBRARIES(tc_http_server pthread fdfsclient fastcommon m ${TUCHUANG_MYSQL_LIB} spdlogd
+        gRPC::grpc++ gRPC::grpc++_reflection protobuf::libprotobuf)

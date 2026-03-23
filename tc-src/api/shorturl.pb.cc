@@ -16,37 +16,43 @@
 #include <google/protobuf/port_def.inc>
 
 PROTOBUF_PRAGMA_INIT_SEG
+
+namespace _pb = ::PROTOBUF_NAMESPACE_ID;
+namespace _pbi = _pb::internal;
+
 namespace shorturl_voice {
-constexpr Url::Url(
-  ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
-  : url_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
-  , ispublic_(false){}
+PROTOBUF_CONSTEXPR Url::Url(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.url_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.ispublic_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
 struct UrlDefaultTypeInternal {
-  constexpr UrlDefaultTypeInternal()
-    : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR UrlDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
   ~UrlDefaultTypeInternal() {}
   union {
     Url _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT UrlDefaultTypeInternal _Url_default_instance_;
-constexpr ShortKey::ShortKey(
-  ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
-  : key_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
-  , ispublic_(false){}
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 UrlDefaultTypeInternal _Url_default_instance_;
+PROTOBUF_CONSTEXPR ShortKey::ShortKey(
+    ::_pbi::ConstantInitialized): _impl_{
+    /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.ispublic_)*/false
+  , /*decltype(_impl_._cached_size_)*/{}} {}
 struct ShortKeyDefaultTypeInternal {
-  constexpr ShortKeyDefaultTypeInternal()
-    : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR ShortKeyDefaultTypeInternal()
+      : _instance(::_pbi::ConstantInitialized{}) {}
   ~ShortKeyDefaultTypeInternal() {}
   union {
     ShortKey _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT ShortKeyDefaultTypeInternal _ShortKey_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ShortKeyDefaultTypeInternal _ShortKey_default_instance_;
 }  // namespace shorturl_voice
-static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_shorturl_2eproto[2];
-static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_shorturl_2eproto = nullptr;
-static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_shorturl_2eproto = nullptr;
+static ::_pb::Metadata file_level_metadata_shorturl_2eproto[2];
+static constexpr ::_pb::EnumDescriptor const** file_level_enum_descriptors_shorturl_2eproto = nullptr;
+static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors_shorturl_2eproto = nullptr;
 
 const uint32_t TableStruct_shorturl_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
@@ -55,25 +61,25 @@ const uint32_t TableStruct_shorturl_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::shorturl_voice::Url, url_),
-  PROTOBUF_FIELD_OFFSET(::shorturl_voice::Url, ispublic_),
+  PROTOBUF_FIELD_OFFSET(::shorturl_voice::Url, _impl_.url_),
+  PROTOBUF_FIELD_OFFSET(::shorturl_voice::Url, _impl_.ispublic_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::shorturl_voice::ShortKey, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::shorturl_voice::ShortKey, key_),
-  PROTOBUF_FIELD_OFFSET(::shorturl_voice::ShortKey, ispublic_),
+  PROTOBUF_FIELD_OFFSET(::shorturl_voice::ShortKey, _impl_.key_),
+  PROTOBUF_FIELD_OFFSET(::shorturl_voice::ShortKey, _impl_.ispublic_),
 };
-static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::shorturl_voice::Url)},
   { 8, -1, -1, sizeof(::shorturl_voice::ShortKey)},
 };
 
-static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
-  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::shorturl_voice::_Url_default_instance_),
-  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::shorturl_voice::_ShortKey_default_instance_),
+static const ::_pb::Message* const file_default_instances[] = {
+  &::shorturl_voice::_Url_default_instance_._instance,
+  &::shorturl_voice::_ShortKey_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_shorturl_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
@@ -85,19 +91,21 @@ const char descriptor_table_protodef_shorturl_2eproto[] PROTOBUF_SECTION_VARIABL
   "Url\022\030.shorturl_voice.ShortKey\032\023.shorturl"
   "_voice.Url\"\000B\020Z\016shorturl/protob\006proto3"
   ;
-static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_shorturl_2eproto_once;
-const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_shorturl_2eproto = {
-  false, false, 278, descriptor_table_protodef_shorturl_2eproto, "shorturl.proto", 
-  &descriptor_table_shorturl_2eproto_once, nullptr, 0, 2,
-  schemas, file_default_instances, TableStruct_shorturl_2eproto::offsets,
-  file_level_metadata_shorturl_2eproto, file_level_enum_descriptors_shorturl_2eproto, file_level_service_descriptors_shorturl_2eproto,
+static ::_pbi::once_flag descriptor_table_shorturl_2eproto_once;
+const ::_pbi::DescriptorTable descriptor_table_shorturl_2eproto = {
+    false, false, 278, descriptor_table_protodef_shorturl_2eproto,
+    "shorturl.proto",
+    &descriptor_table_shorturl_2eproto_once, nullptr, 0, 2,
+    schemas, file_default_instances, TableStruct_shorturl_2eproto::offsets,
+    file_level_metadata_shorturl_2eproto, file_level_enum_descriptors_shorturl_2eproto,
+    file_level_service_descriptors_shorturl_2eproto,
 };
-PROTOBUF_ATTRIBUTE_WEAK const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable* descriptor_table_shorturl_2eproto_getter() {
+PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_shorturl_2eproto_getter() {
   return &descriptor_table_shorturl_2eproto;
 }
 
 // Force running AddDescriptors() at dynamic initialization time.
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY static ::PROTOBUF_NAMESPACE_ID::internal::AddDescriptorsRunner dynamic_init_dummy_shorturl_2eproto(&descriptor_table_shorturl_2eproto);
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_shorturl_2eproto(&descriptor_table_shorturl_2eproto);
 namespace shorturl_voice {
 
 // ===================================================================
@@ -109,55 +117,61 @@ class Url::_Internal {
 Url::Url(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
-  SharedCtor();
-  if (!is_message_owned) {
-    RegisterArenaDtor(arena);
-  }
+  SharedCtor(arena, is_message_owned);
   // @@protoc_insertion_point(arena_constructor:shorturl_voice.Url)
 }
 Url::Url(const Url& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
+  Url* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.url_){}
+    , decltype(_impl_.ispublic_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  url_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  _impl_.url_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    url_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+    _impl_.url_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_url().empty()) {
-    url_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_url(), 
-      GetArenaForAllocation());
+    _this->_impl_.url_.Set(from._internal_url(), 
+      _this->GetArenaForAllocation());
   }
-  ispublic_ = from.ispublic_;
+  _this->_impl_.ispublic_ = from._impl_.ispublic_;
   // @@protoc_insertion_point(copy_constructor:shorturl_voice.Url)
 }
 
-inline void Url::SharedCtor() {
-url_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  url_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-ispublic_ = false;
+inline void Url::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.url_){}
+    , decltype(_impl_.ispublic_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.url_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.url_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 Url::~Url() {
   // @@protoc_insertion_point(destructor:shorturl_voice.Url)
-  if (GetArenaForAllocation() != nullptr) return;
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
   SharedDtor();
-  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
 inline void Url::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  url_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  _impl_.url_.Destroy();
 }
 
-void Url::ArenaDtor(void* object) {
-  Url* _this = reinterpret_cast< Url* >(object);
-  (void)_this;
-}
-void Url::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
-}
 void Url::SetCachedSize(int size) const {
-  _cached_size_.Set(size);
+  _impl_._cached_size_.Set(size);
 }
 
 void Url::Clear() {
@@ -166,31 +180,31 @@ void Url::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  url_.ClearToEmpty();
-  ispublic_ = false;
+  _impl_.url_.ClearToEmpty();
+  _impl_.ispublic_ = false;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* Url::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+const char* Url::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
-    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // string url = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_url();
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "shorturl_voice.Url.url"));
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "shorturl_voice.Url.url"));
         } else
           goto handle_unusual;
         continue;
       // bool isPublic = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
-          ispublic_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          _impl_.ispublic_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -237,11 +251,11 @@ uint8_t* Url::_InternalSerialize(
   // bool isPublic = 2;
   if (this->_internal_ispublic() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(2, this->_internal_ispublic(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_ispublic(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:shorturl_voice.Url)
@@ -268,35 +282,31 @@ size_t Url::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
 const ::PROTOBUF_NAMESPACE_ID::Message::ClassData Url::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
     Url::MergeImpl
 };
 const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*Url::GetClassData() const { return &_class_data_; }
 
-void Url::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<Url *>(to)->MergeFrom(
-      static_cast<const Url &>(from));
-}
 
-
-void Url::MergeFrom(const Url& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:shorturl_voice.Url)
-  GOOGLE_DCHECK_NE(&from, this);
+void Url::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<Url*>(&to_msg);
+  auto& from = static_cast<const Url&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:shorturl_voice.Url)
+  GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (!from._internal_url().empty()) {
-    _internal_set_url(from._internal_url());
+    _this->_internal_set_url(from._internal_url());
   }
   if (from._internal_ispublic() != 0) {
-    _internal_set_ispublic(from._internal_ispublic());
+    _this->_internal_set_ispublic(from._internal_ispublic());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
 void Url::CopyFrom(const Url& from) {
@@ -316,15 +326,14 @@ void Url::InternalSwap(Url* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      &url_, lhs_arena,
-      &other->url_, rhs_arena
+      &_impl_.url_, lhs_arena,
+      &other->_impl_.url_, rhs_arena
   );
-  swap(ispublic_, other->ispublic_);
+  swap(_impl_.ispublic_, other->_impl_.ispublic_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Url::GetMetadata() const {
-  return ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(
+  return ::_pbi::AssignDescriptors(
       &descriptor_table_shorturl_2eproto_getter, &descriptor_table_shorturl_2eproto_once,
       file_level_metadata_shorturl_2eproto[0]);
 }
@@ -338,55 +347,61 @@ class ShortKey::_Internal {
 ShortKey::ShortKey(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
-  SharedCtor();
-  if (!is_message_owned) {
-    RegisterArenaDtor(arena);
-  }
+  SharedCtor(arena, is_message_owned);
   // @@protoc_insertion_point(arena_constructor:shorturl_voice.ShortKey)
 }
 ShortKey::ShortKey(const ShortKey& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
+  ShortKey* const _this = this; (void)_this;
+  new (&_impl_) Impl_{
+      decltype(_impl_.key_){}
+    , decltype(_impl_.ispublic_){}
+    , /*decltype(_impl_._cached_size_)*/{}};
+
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  _impl_.key_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    key_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+    _impl_.key_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_key().empty()) {
-    key_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_key(), 
-      GetArenaForAllocation());
+    _this->_impl_.key_.Set(from._internal_key(), 
+      _this->GetArenaForAllocation());
   }
-  ispublic_ = from.ispublic_;
+  _this->_impl_.ispublic_ = from._impl_.ispublic_;
   // @@protoc_insertion_point(copy_constructor:shorturl_voice.ShortKey)
 }
 
-inline void ShortKey::SharedCtor() {
-key_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  key_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
-#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-ispublic_ = false;
+inline void ShortKey::SharedCtor(
+    ::_pb::Arena* arena, bool is_message_owned) {
+  (void)arena;
+  (void)is_message_owned;
+  new (&_impl_) Impl_{
+      decltype(_impl_.key_){}
+    , decltype(_impl_.ispublic_){false}
+    , /*decltype(_impl_._cached_size_)*/{}
+  };
+  _impl_.key_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.key_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 ShortKey::~ShortKey() {
   // @@protoc_insertion_point(destructor:shorturl_voice.ShortKey)
-  if (GetArenaForAllocation() != nullptr) return;
+  if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
+  (void)arena;
+    return;
+  }
   SharedDtor();
-  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
 inline void ShortKey::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  key_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  _impl_.key_.Destroy();
 }
 
-void ShortKey::ArenaDtor(void* object) {
-  ShortKey* _this = reinterpret_cast< ShortKey* >(object);
-  (void)_this;
-}
-void ShortKey::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
-}
 void ShortKey::SetCachedSize(int size) const {
-  _cached_size_.Set(size);
+  _impl_._cached_size_.Set(size);
 }
 
 void ShortKey::Clear() {
@@ -395,31 +410,31 @@ void ShortKey::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  key_.ClearToEmpty();
-  ispublic_ = false;
+  _impl_.key_.ClearToEmpty();
+  _impl_.ispublic_ = false;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* ShortKey::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+const char* ShortKey::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
-    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // string key = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_key();
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "shorturl_voice.ShortKey.key"));
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "shorturl_voice.ShortKey.key"));
         } else
           goto handle_unusual;
         continue;
       // bool isPublic = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
-          ispublic_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          _impl_.ispublic_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -466,11 +481,11 @@ uint8_t* ShortKey::_InternalSerialize(
   // bool isPublic = 2;
   if (this->_internal_ispublic() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(2, this->_internal_ispublic(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(2, this->_internal_ispublic(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+    target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:shorturl_voice.ShortKey)
@@ -497,35 +512,31 @@ size_t ShortKey::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
+  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
 const ::PROTOBUF_NAMESPACE_ID::Message::ClassData ShortKey::_class_data_ = {
-    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSizeCheck,
+    ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
     ShortKey::MergeImpl
 };
 const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*ShortKey::GetClassData() const { return &_class_data_; }
 
-void ShortKey::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
-                      const ::PROTOBUF_NAMESPACE_ID::Message& from) {
-  static_cast<ShortKey *>(to)->MergeFrom(
-      static_cast<const ShortKey &>(from));
-}
 
-
-void ShortKey::MergeFrom(const ShortKey& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:shorturl_voice.ShortKey)
-  GOOGLE_DCHECK_NE(&from, this);
+void ShortKey::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<ShortKey*>(&to_msg);
+  auto& from = static_cast<const ShortKey&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:shorturl_voice.ShortKey)
+  GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (!from._internal_key().empty()) {
-    _internal_set_key(from._internal_key());
+    _this->_internal_set_key(from._internal_key());
   }
   if (from._internal_ispublic() != 0) {
-    _internal_set_ispublic(from._internal_ispublic());
+    _this->_internal_set_ispublic(from._internal_ispublic());
   }
-  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
 void ShortKey::CopyFrom(const ShortKey& from) {
@@ -545,15 +556,14 @@ void ShortKey::InternalSwap(ShortKey* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      &key_, lhs_arena,
-      &other->key_, rhs_arena
+      &_impl_.key_, lhs_arena,
+      &other->_impl_.key_, rhs_arena
   );
-  swap(ispublic_, other->ispublic_);
+  swap(_impl_.ispublic_, other->_impl_.ispublic_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata ShortKey::GetMetadata() const {
-  return ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(
+  return ::_pbi::AssignDescriptors(
       &descriptor_table_shorturl_2eproto_getter, &descriptor_table_shorturl_2eproto_once,
       file_level_metadata_shorturl_2eproto[1]);
 }
@@ -561,10 +571,12 @@ void ShortKey::InternalSwap(ShortKey* other) {
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace shorturl_voice
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::shorturl_voice::Url* Arena::CreateMaybeMessage< ::shorturl_voice::Url >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::shorturl_voice::Url*
+Arena::CreateMaybeMessage< ::shorturl_voice::Url >(Arena* arena) {
   return Arena::CreateMessageInternal< ::shorturl_voice::Url >(arena);
 }
-template<> PROTOBUF_NOINLINE ::shorturl_voice::ShortKey* Arena::CreateMaybeMessage< ::shorturl_voice::ShortKey >(Arena* arena) {
+template<> PROTOBUF_NOINLINE ::shorturl_voice::ShortKey*
+Arena::CreateMaybeMessage< ::shorturl_voice::ShortKey >(Arena* arena) {
   return Arena::CreateMessageInternal< ::shorturl_voice::ShortKey >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE

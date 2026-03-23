@@ -213,10 +213,9 @@ void CHttpConn::OnRead() // CHttpConn业务层面的OnRead
     uint32_t buf_len = in_buf_.GetWriteOffset();
     in_buf[buf_len] = '\0';
 
-    // 如果buf_len 过长可能是受到攻击，则断开连接
-    // 正常的url最大长度为2048，我们接受的所有数据长度不得大于2K
-    if (buf_len > 2048) {
-        LogError("get too much data: {}", in_buf);
+    if (buf_len > MAX_HTTP_REQUEST_BYTES) {
+        LogError("get too much data: len={}, max={}", buf_len,
+                 MAX_HTTP_REQUEST_BYTES);
         Close();
         return;
     }

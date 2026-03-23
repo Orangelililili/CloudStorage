@@ -1,5 +1,5 @@
 #使用数据库
-use `0voice_tuchuang`;
+use `tuchuang`;
 
 #取消安全模式
 SET SQL_SAFE_UPDATES = 0;

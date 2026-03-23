@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Orange存储",
+  "name": "Orange分布式存储系统",
   "icons": [
     {
       "src": "favicon.ico",

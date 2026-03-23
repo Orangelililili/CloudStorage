@@ -1,0 +1,30 @@
+# MySQL + Redis，供 tc_http_server 本地联调（密码与 tc-src/tc_http_server.conf 中一致）
+# 初始化 SQL：仓库根目录 tuchuang.sql（库名 tuchuang）。若曾用旧库名，需删 Docker 卷重建或自行迁移数据。
+#
+# 启动需本机有 Compose：docker compose（插件）或 docker-compose（独立命令）。
+# 若执行「docker compose up -d」报 unknown shorthand flag: 'd'，多半是未装 compose 插件，见 scripts/docker-stack.sh 或:
+#   sudo apt install -y docker-compose-plugin
+#
+# 默认经 DaoCloud 拉取官方 library 镜像，缓解 registry-1.docker.io 超时。
+# 若需直连 Docker Hub，可改回: mysql:8.0 / redis:7-alpine
+services:
+  mysql:
+    image: docker.m.daocloud.io/library/mysql:8.0
+    container_name: tuchuang-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./tuchuang.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7-alpine
+    container_name: tuchuang-redis
+    ports:
+      - "6379:6379"
