@@ -18,8 +18,10 @@ fi
 BUILD="$ROOT/tc-src/build"
 CONF="$ROOT/tc-src/tc_http_server.conf"
 if [[ ! -x "$BUILD/tc_http_server" ]]; then
-  echo "未找到 $BUILD/tc_http_server。请在 build 目录下编译（不要重复 cd tc-src/build）："
-  echo "  cd $ROOT/tc-src/build && cmake .. && make"
+  echo "未找到 $BUILD/tc_http_server。编译示例："
+  echo "  cd $ROOT/tc-src/build && cmake .. && make && cp -f ../tc_http_server.conf ."
+  echo "启动反代请在仓库根目录执行（勿在 tc-src/build 下执行 ./scripts/...）："
+  echo "  cd $ROOT && ./scripts/run-dev-8080.sh"
   exit 1
 fi
 
@@ -90,5 +92,44 @@ if ! (echo >/dev/tcp/127.0.0.1/8081) 2>/dev/null; then
   echo "等待 8081 超时，tc_http_server 可能启动失败，请查看上方日志"
   exit 1
 fi
+
+# 上次未退出的 dev_proxy_8080.py 会占 8080 → Python OSError: Address already in use
+_free_port_8080_for_dev() {
+  local line pid exe cmd
+  if ! (echo >/dev/tcp/127.0.0.1/8080) 2>/dev/null; then
+    return 0
+  fi
+  while IFS= read -r line; do
+    [[ "$line" == *8080* ]] || continue
+    [[ "$line" == *pid=* ]] || continue
+    if [[ "$line" =~ pid=([0-9]+) ]]; then
+      pid="${BASH_REMATCH[1]}"
+      cmd=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)
+      if [[ "$cmd" == *dev_proxy_8080.py* ]]; then
+        echo "结束占用 8080 的旧 dev_proxy (pid=$pid)"
+        kill -TERM "$pid" 2>/dev/null || true
+      fi
+    fi
+  done < <(ss -lntp 2>/dev/null || true)
+  sleep 0.4
+  if ! (echo >/dev/tcp/127.0.0.1/8080) 2>/dev/null; then
+    return 0
+  fi
+  if command -v fuser >/dev/null 2>&1; then
+    echo "8080 仍被占用，开发脚本将执行: fuser -k 8080/tcp"
+    fuser -k 8080/tcp 2>/dev/null || true
+    sleep 0.5
+  else
+    echo "8080 已被占用。请结束占用进程后重试："
+    echo "  ss -lntp | grep 8080"
+    exit 1
+  fi
+  if (echo >/dev/tcp/127.0.0.1/8080) 2>/dev/null; then
+    echo "无法释放 8080："
+    ss -lntp 2>/dev/null | grep 8080 || true
+    exit 1
+  fi
+}
+_free_port_8080_for_dev
 
 exec python3 "$ROOT/scripts/dev_proxy_8080.py" "$@"

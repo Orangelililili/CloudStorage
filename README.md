@@ -16,6 +16,98 @@
 
 ---
 
+## 架构与模块关系
+
+### 开发环境（当前仓库默认跑法）
+
+浏览器只访问 **8080**；**MySQL / Redis** 在 **Docker 容器**里，端口映射到宿主机；**C++ 后端**与 **Python 反代**跑在 **宿主机**（VM 里的 Ubuntu），通过 `127.0.0.1` 连容器映射端口。**FastDFS** 不在 `docker-compose.yml` 里，需本机另行安装配置（与 `tc_http_server.conf` 中 `dfs_path_client` 等一致）。
+
+```mermaid
+flowchart TB
+  subgraph browser["浏览器"]
+    U[用户]
+  end
+  subgraph host["宿主机 Ubuntu（VM 内）"]
+    direction TB
+    P["dev_proxy_8080.py :8080\n读 tc-front + /api 反代"]
+    S["tc_http_server :8081\nC++ / Reactor + 线程池"]
+    F[tc-front 静态资源]
+    U -->|http://127.0.0.1:8080| P
+    P -->|POST/GET /api/*| S
+    P -->|页面与静态资源| F
+  end
+  subgraph docker["Docker（两个独立容器）"]
+    direction LR
+    M[("tuchuang-mysql\nMySQL :3306")]
+    R[("tuchuang-redis\nRedis :6379")]
+  end
+  subgraph fds["FastDFS（本机或其它机器）"]
+    FD[tracker + storage\nclient.conf]
+  end
+  S -->|127.0.0.1:3306 库 tuchuang| M
+  S -->|127.0.0.1:6379 db0/db1| R
+  S -->|上传文件| FD
+```
+
+要点：**不是**「整个项目装在一个容器里」；compose 只起 **数据库与缓存**，业务进程在宿主机。
+
+### 生产环境（参考）
+
+生产常见做法是 **Nginx** 对外端口（如 80/443）：静态资源、`/api` 反代到 `tc_http_server`，大文件上传可走 Nginx upload 模块再转后端（见仓库根目录 `nginx.conf` 示例）。数据层仍可为 Docker 或物理机上的 MySQL/Redis；文件仍在 **FastDFS**。
+
+```mermaid
+flowchart LR
+  subgraph edge["Nginx"]
+    N[静态 + /api 反代\n可选 upload 模块]
+  end
+  subgraph app["业务机"]
+    S2[tc_http_server]
+  end
+  subgraph data["数据层"]
+    M2[(MySQL)]
+    R2[(Redis)]
+  end
+  subgraph files["对象存储"]
+    F2[FastDFS]
+  end
+  Client[浏览器] --> N
+  N --> S2
+  S2 --> M2
+  S2 --> R2
+  S2 --> F2
+```
+
+### 后端 `tc-src` 内部分层（逻辑结构）
+
+```mermaid
+flowchart TB
+  subgraph srv["tc_http_server 进程"]
+    NET[netlib / epoll Reactor]
+    HC[http_conn 解析 HTTP\n路由 /api/*]
+    API[api_*.cc 业务\n注册 / 登录 / 上传 / 文件…]
+    POOL[(MySQL 连接池)]
+    RED[(Redis 连接池)]
+    NET --> HC
+    HC --> API
+    API --> POOL
+    API --> RED
+  end
+  POOL --> MYSQL[(MySQL)]
+  RED --> REDIS[(Redis)]
+  API --> FDFS[FastDFS 客户端 API]
+```
+
+### 可选：短链模块
+
+`tc_http_server.conf` 中 **`enable_shorturl=1`** 时，上传等流程可经 **gRPC** 调用 `shorturl/` 下 Go 服务生成短链接；默认课程/本地联调多为关闭状态。
+
+```mermaid
+flowchart LR
+  TC[tc_http_server] -.->|gRPC 可选| GO[shorturl-server\nshorturl/]
+```
+
+---
+
 ## 仓库目录结构
 
 ```
@@ -216,8 +308,6 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 
 ![开发环境终端](display/06-dev-proxy.png)
 
-> **说明**：若尚未添加某张图片，Markdown 预览可能显示裂图或仅 alt 文字，属正常现象；放入同名文件后即会显示。
-
 ---
 
 ## 配置与端口小结
@@ -249,6 +339,4 @@ FastDFS、`storage_web_server_*` 等见 `tc_http_server.conf`；上传成功依�
 
 ---
 
-## 许可证与致谢
 
-本项目在原有教学用图床代码基础上演进；若使用第三方组件，请遵循各自许可证。
