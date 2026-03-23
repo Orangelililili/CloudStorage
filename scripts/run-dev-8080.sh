@@ -132,4 +132,5 @@ _free_port_8080_for_dev() {
 }
 _free_port_8080_for_dev
 
-exec python3 "$ROOT/scripts/dev_proxy_8080.py" "$@"
+# 让代理同时监听本机 LAN IP（FastDFS 生成的 url 默认带宿主机 IP）
+exec python3 "$ROOT/scripts/dev_proxy_8080.py" --listen 0.0.0.0 "$@"

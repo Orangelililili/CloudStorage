@@ -126,7 +126,8 @@ my_tuchuang/
 │   ├── ensure-mysql-tuchuang.sh  # 旧数据卷无「tuchuang」库时手动导入 SQL
 │   ├── dev_proxy_8080.py     # 8080 开发入口（由 run-dev-8080.sh 调用）
 │   ├── bootstrap-deps.sh     # 拉取 MariaDB 客户端等到 .deps（供 CMake 使用）
-│   └── run-backend.sh        # 仅启动 tc_http_server（需已配置好环境）
+│   ├── run-backend.sh        # 仅启动 tc_http_server（需已配置好环境）
+│   └── configure-fastdfs.sh  # 一键同步 FastDFS 与 tc_http_server 上传配置
 ├── tc-src/                   # C++ 服务源码
 │   ├── main.cc               # 入口：初始化 DB/Redis 池、监听 HTTP
 │   ├── http_conn.cc          # HTTP 解析与 /api 路由
@@ -180,6 +181,18 @@ cp -f ../tc_http_server.conf .
 
 （若尚未建 `build` 目录，先 `mkdir -p tc-src/build`。）
 
+### 3.5 FastDFS 配置同步（首次部署/迁移服务器必做）
+
+```bash
+./scripts/configure-fastdfs.sh
+```
+
+如 FastDFS 在其它机器，可显式指定 tracker / storage web 地址：
+
+```bash
+./scripts/configure-fastdfs.sh --tracker-host 10.0.0.12 --storage-web-ip 10.0.0.12
+```
+
 ### 4. 一键启动（前端 + API）
 
 在仓库根目录：
@@ -189,6 +202,46 @@ cp -f ../tc_http_server.conf .
 ```
 
 浏览器打开：**http://127.0.0.1:8080/**
+
+---
+
+## 新机器部署（Linux）
+
+本项目可以迁移到其它 Linux 环境，但 `run-dev-8080.sh` 仅负责启动流程，不会自动安装系统依赖或 FastDFS。
+
+### 1. 前置依赖
+
+- 基础工具：`bash`、`python3`、`cmake`、`g++`
+- 数据层：MySQL + Redis（推荐用仓库 `docker-compose.yml` 启动）
+- FastDFS：`fdfs_trackerd`、`fdfs_storaged`、`fdfs_upload_file`、`fdfs_file_info`
+- 代码与产物：仓库目录、`tc-front/` 静态资源、`tc-src/build/tc_http_server`（或在新机重新编译）
+
+### 2. 推荐部署步骤（新机）
+
+在仓库根目录执行：
+
+```bash
+# 1) 启 MySQL / Redis
+./scripts/docker-stack.sh up -d
+
+# 2) 如需编译后端
+mkdir -p tc-src/build
+cd tc-src/build && cmake .. && make
+cd ../..
+
+# 3) 对齐 FastDFS 与项目配置（建议首次部署必跑）
+./scripts/configure-fastdfs.sh
+
+# 4) 启动开发入口（8080 + 8081）
+./scripts/run-dev-8080.sh
+```
+
+### 3. 迁移时常见注意事项
+
+- `run-dev-8080.sh` 不是安装器：缺少 FastDFS/数据库时会启动失败。
+- 机器 IP 变化后，建议重新执行 `./scripts/configure-fastdfs.sh`，同步 `tracker_server` 与 `storage_web_server_*`。
+- 开发态图片直链默认映射本机目录 `/home/fastdfs/storage/data`（由 `scripts/dev_proxy_8080.py` 处理 `/group1/M00/...`）。
+  - 若新机 FastDFS 数据目录不同，请调整 `--fdfs-data-root` 或脚本默认值。
 
 ---
 
@@ -293,6 +346,7 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 | `display/04-upload.png` | 上传流程或上传成功提示 |
 | `display/05-share.png` | 分享或图床相关页面（若有） |
 | `display/06-dev-proxy.png` | 终端中 `run-dev-8080.sh` 或 Docker 运行状态（可选） |
+| `display/mysql.png` | MySQL 运行结果（可选） |
 
 在图片放入对应路径后，以下引用即可正常显示：
 
@@ -308,6 +362,8 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 
 ![开发环境终端](display/06-dev-proxy.png)
 
+![MySQL运行结果](display/mysql.png)
+
 ---
 
 ## 配置与端口小结
@@ -319,7 +375,7 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 | MySQL | 3306 | `docker-compose.yml` 映射 |
 | Redis | 6379 | `docker-compose.yml` 映射 |
 
-FastDFS、`storage_web_server_*` 等见 `tc_http_server.conf`；上传成功依赖本机 **FastDFS 客户端配置** 与 **tracker/storage** 可用。
+FastDFS、`storage_web_server_*` 等见 `tc_http_server.conf`；推荐先执行 `./scripts/configure-fastdfs.sh` 自动对齐配置并自检连通性。开发模式下默认使用 `8080` 作为文件 URL 端口，`scripts/dev_proxy_8080.py` 会将 `/group1/M00/...` 映射到本机 FastDFS 数据目录（默认 `/home/fastdfs/storage/data`）。
 
 ---
 

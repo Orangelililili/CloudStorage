@@ -463,7 +463,21 @@ int handleSharePicture(const char *user, const char *filemd5,
     char sql_cmd[SQL_MAX_LEN] = {0};
     char create_time[TIME_STRING_LEN];
     string urlmd5;
-    urlmd5 = RandomString(32); // 这里我们先简单的，直接使用随机数代替 MD5的使用
+    // 避免重启后随机序列重复导致 urlmd5 冲突，最多重试 8 次。
+    for (int i = 0; i < 8; ++i) {
+        urlmd5 = RandomString(32);
+        sprintf(sql_cmd, "select 1 from share_picture_list where urlmd5 = '%s' limit 1",
+                urlmd5.c_str());
+        int has_record = CheckwhetherHaveRecord(db_conn, sql_cmd);
+        if (has_record == 0) {
+            break;
+        }
+        if (i == 7) {
+            LogError("generate unique urlmd5 failed");
+            ret = -1;
+            goto END;
+        }
+    }
 
     LogInfo("urlmd5: {}", urlmd5);
 
