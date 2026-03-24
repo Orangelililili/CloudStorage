@@ -354,6 +354,17 @@ Cache Aside（旁路缓存）是最常用的缓存模式，核心是：
 - 客户端上传后得到 `group + file_id`。  
 - Web 访问通常经 Nginx fastdfs 模块。
 
+```mermaid
+flowchart LR
+    C[Client/Browser] --> N[Nginx]
+    N --> A[C++ API Service]
+    A --> M[(MySQL 元数据)]
+    A --> R[(Redis 热点缓存)]
+    A --> T[FastDFS Tracker]
+    T --> S1[Storage GroupA]
+    T --> S2[Storage GroupB]
+```
+
 **项目落地**  
 - `ApiUpload` 上传后获得 file_id，并拼接可访问 URL 写入 `file_info`。  
 - 存储与元数据分离：FastDFS 存内容，MySQL 存 md5/file_id/url/count。  
@@ -363,8 +374,62 @@ Cache Aside（旁路缓存）是最常用的缓存模式，核心是：
 - 相比本地磁盘，FastDFS 更适合分布式扩容和故障隔离。  
 - 相比对象存储云服务，自建成本更高但控制力更强。
 
+**为什么要用 FastDFS（面试高频追问）**  
+- 图床核心压力是大文件读写，FastDFS把“文件数据面”和“业务控制面”解耦，业务服务不做字节搬运。  
+- 支持按组横向扩容，容量增长时新增 Storage 即可，不需要大改业务代码。  
+- 支持副本与故障转移，适合“读多写多、文件多、持续增长”的图片场景。  
+- 对比直接上本地磁盘方案，避免单机容量和单点风险。  
+
+**有没有考虑其他方案（面试建议回答）**  
+- `MinIO/S3`：生态成熟、接口标准（S3 API），但引入对象协议与鉴权体系，改造成本看团队经验。  
+- `Ceph`：能力很强（块/对象/文件统一），但运维复杂度和学习曲线更高。  
+- `NFS/共享盘`：搭建快，但扩展性、性能隔离、元数据一致性能力较弱。  
+- 结论：当前项目规模和团队栈下，FastDFS 在“性能、可控性、接入成本”之间是较平衡选择。  
+
+**FastDFS 内部角色：Client / Tracker / Storage**  
+- `Client`：上传下载发起方（你的 C++ 服务就是业务 Client），负责把文件或 file_id 请求发给集群。  
+- `Tracker`：轻量调度中心，不存文件内容，负责路由、选组、选 Storage、返回可用节点信息。  
+- `Storage`：真正存储文件内容与同步副本的节点，按 group 组织。  
+
+**三者如何协作（上传链路）**  
+```mermaid
+sequenceDiagram
+    participant B as 业务服务(Client)
+    participant T as Tracker
+    participant S as Storage
+    participant DB as MySQL
+
+    B->>T: 查询可上传节点(按策略选组)
+    T-->>B: 返回 group + storage_addr
+    B->>S: 上传文件内容
+    S-->>B: 返回 file_id
+    B->>DB: 写入 md5/file_id/url 元数据
+    DB-->>B: 持久化成功
+```
+
+**调度与容灾（你需要会说的点）**  
+- 调度：Tracker 通常按组容量、负载或策略返回可用 Storage；客户端不感知底层节点细节。  
+- 多副本：同组 Storage 做文件同步，单节点故障不影响读取（取决于同步和副本策略）。  
+- 多 Tracker：Tracker 可多实例部署，避免单点；客户端配置 tracker 列表实现高可用。  
+- 故障恢复：Storage 异常后可重建并追平数据，业务层通过 `file_id` 无需改动引用。  
+
+```mermaid
+flowchart TD
+    U[上传请求] --> Q{Tracker可用?}
+    Q -- 是 --> P[分配Storage并上传]
+    Q -- 否 --> T2[切换备用Tracker]
+    T2 --> P
+    P --> R{主Storage异常?}
+    R -- 否 --> OK[返回file_id并落库]
+    R -- 是 --> S2[切换同组副本Storage重试]
+    S2 --> OK
+```
+
 **面试总结话术**  
 “FastDFS 在这个项目里承担的是‘对象层’，业务层只处理引用和权限，不直接背大文件传输压力。”
+
+**可直接复述的追问答案**  
+“我们选 FastDFS，核心是把大文件的数据面从业务服务拆出去：Client 先找 Tracker 做调度，Tracker 返回可用 Storage，上传成功后返回 file_id，业务只落元数据。相比本地磁盘，这套架构天然支持横向扩容和故障隔离；相比更重的平台型存储，它接入成本更低，适合当前图床阶段。容灾上通过多 Tracker + Storage 副本 + 失败重试实现高可用。”
 
 ---
 
@@ -806,6 +871,109 @@ Cache Aside（旁路缓存）是最常用的缓存模式，核心是：
 2) 原理：protobuf 更紧凑、HTTP/2 多路复用。  
 3) 项目证据：shorturl 使用 proto 定义接口并生成代码。  
 4) 权衡：调试门槛略高，需要工具链支持。
+
+---
+
+## 全局图解速记（Mermaid）
+
+说明：下面 6 张图对应整份文档的主线。你可以按“先总览 -> 再上传 -> 再并发与一致性 -> 最后容灾”来复习。
+
+### 图 1：系统全链路总览（对应题 5/6/7/9/16/18/24）
+
+```mermaid
+flowchart LR
+    U[Browser/App] --> N[Nginx]
+    N --> A[C++ API 服务<br/>Reactor + 线程池]
+    A --> M[(MySQL)]
+    A --> R[(Redis)]
+    A --> T[FastDFS Tracker]
+    T --> S[FastDFS Storage]
+    A --> G[Go ShortURL 服务(gRPC)]
+```
+
+### 图 2：上传链路（控制面与数据面分离，对应题 13/19/26）
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant N as Nginx(upload)
+    participant A as API Service
+    participant T as Tracker
+    participant S as Storage
+    participant DB as MySQL
+
+    C->>N: multipart 上传
+    N->>A: 传 file_path/md5/size/user
+    A->>T: 申请可用 storage
+    T-->>A: group + storage addr
+    A->>S: 上传文件数据
+    S-->>A: 返回 file_id
+    A->>DB: 落库(file_id, md5, url, user)
+    A-->>C: 返回业务结果
+```
+
+### 图 3：MD5 秒传分支（对应题 22）
+
+```mermaid
+flowchart TD
+    Q[收到上传请求 + md5] --> C1{MySQL已存在md5?}
+    C1 -- 是 --> R1[仅写 user_file_list 关联]
+    R1 --> R2[引用计数 count + 1]
+    R2 --> OK1[秒传成功]
+    C1 -- 否 --> U1[走 FastDFS 正常上传]
+    U1 --> U2[写 file_info + user_file_list]
+    U2 --> OK2[上传成功]
+```
+
+### 图 4：并发回写模型（对应题 17/21）
+
+```mermaid
+flowchart LR
+    E[epoll 主线程] --> D[请求分发]
+    D --> P[线程池执行业务]
+    P --> Q[AddResponseData 回写队列]
+    Q --> E2[主线程 SendResponseDataList]
+    E2 --> FD[统一写 socket fd]
+```
+
+### 图 5：排行榜一致性（对应题 7/25）
+
+```mermaid
+flowchart TD
+    A[请求排行数据] --> B[读取 Redis ZSET]
+    B --> C[比对 redis_num 与 sql_num]
+    C --> D{一致?}
+    D -- 是 --> E[直接返回 TopN]
+    D -- 否 --> F[清理并从 MySQL 全量重建 ZSET/HASH]
+    F --> E
+```
+
+### 图 6：故障降级与容灾（对应题 7/16/18）
+
+```mermaid
+flowchart TD
+    RQ[在线请求] --> CK{Redis可用?}
+    CK -- 是 --> RD[缓存命中快速返回]
+    CK -- 否 --> DBF[降级回源 MySQL]
+    DBF --> RT[异步重建缓存]
+
+    RQ --> TK{Tracker可用?}
+    TK -- 是 --> ST[正常调度 Storage]
+    TK -- 否 --> BK[切换备用 Tracker 列表]
+
+    ST --> SK{Storage故障?}
+    SK -- 否 --> OK[返回结果]
+    SK -- 是 --> RP[切换同组副本并重试]
+    RP --> OK
+```
+
+### 看图答题建议（30 秒版本）
+
+- 先说分层：入口 Nginx、业务 C++、数据 MySQL/Redis、对象 FastDFS、扩展 Go。  
+- 再说解耦：上传下载的数据面下沉到 Nginx/FastDFS，业务层做鉴权和元数据。  
+- 再说并发：Reactor 只管 IO，慢业务进线程池，回写统一主线程发。  
+- 再说一致性：MySQL 为真值，Redis 做加速，异常时可重建。  
+- 最后说容灾：多 Tracker、副本 Storage、缓存降级回源。
 
 ---
 
