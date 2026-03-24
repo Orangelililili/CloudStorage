@@ -6,6 +6,34 @@
 #include "api_common.h"
 #include <sys/time.h>
 #include <time.h>
+// api_upload.cc 中已实现短链转换，这里复用，避免重复实现 gRPC 客户端。
+int originUrl2ShortUrl(const string &origin_url, string &short_url);
+
+static string normalizeStorageUrl(const string &raw_url) {
+    // 老数据可能保存了历史网卡 IP，导致在当前环境打不开；按配置重写 host:port。
+    const string marker = "/group1/M00/";
+    size_t pos = raw_url.find(marker);
+    if (pos == string::npos) {
+        return raw_url;
+    }
+    string suffix = raw_url.substr(pos + 1); // 去掉前导 '/'
+    string normalized = "http://" + s_storage_web_server_ip + ":" +
+                        s_storage_web_server_port + "/" + suffix;
+    return normalized;
+}
+
+static string getEffectiveShareUrl(const string &raw_url) {
+    string normalized = normalizeStorageUrl(raw_url);
+    if (s_shorturl_server_address.empty()) {
+        return normalized;
+    }
+    string short_url;
+    if (originUrl2ShortUrl(normalized, short_url) == 0 && !short_url.empty()) {
+        return short_url;
+    }
+    LogWarn("originUrl2ShortUrl failed in share browse, fallback to normalized url");
+    return normalized;
+}
 //解析的json包
 int decodeSharePictureJson(string &str_json, string &user_name, string &token,
                            string &md5, string &filename) {
@@ -617,11 +645,12 @@ int handleBrowsePicture(const char *urlmd5, string &str_json) {
     ret = 0;
 END:
     // 4. 返回urlmd5 和提取码key
+    string effective_url = getEffectiveShareUrl(picture_url);
     if (ret == 0) {
-        encodeBrowselPictureJson(HTTP_RESP_OK, pv, picture_url, user,
+        encodeBrowselPictureJson(HTTP_RESP_OK, pv, effective_url, user,
                                  create_time, str_json);
     } else {
-        encodeBrowselPictureJson(HTTP_RESP_FAIL, pv, picture_url, user,
+        encodeBrowselPictureJson(HTTP_RESP_FAIL, pv, effective_url, user,
                                  create_time, str_json);
     }
 

@@ -194,6 +194,16 @@ cp -f ../tc_http_server.conf .
 ./scripts/configure-fastdfs.sh --tracker-host 10.0.0.12 --storage-web-ip 10.0.0.12
 ```
 
+### 3.6 启动短链服务（可选，需 Go 环境）
+
+若 `tc_http_server.conf` 中 `enable_shorturl=1`，需先启动短链服务（shorturl-server + shorturl-proxy）：
+
+```bash
+./scripts/run-shorturl.sh
+```
+
+成功后会输出 `short-server 已就绪: 127.0.0.1:50051` 和 `shorturl-proxy 已就绪: 127.0.0.1:8082`。若不需要短链功能，将 `enable_shorturl` 改为 `0` 即可跳过此步。
+
 ### 4. 一键启动（前端 + API）
 
 在仓库根目录：
@@ -513,7 +523,47 @@ Transfer/sec:     10.37MB
 | MySQL | 3306 | `docker-compose.yml` 映射 |
 | Redis | 6379 | `docker-compose.yml` 映射 |
 
-FastDFS、`storage_web_server_*` 等见 `tc_http_server.conf`；推荐先执行 `./scripts/configure-fastdfs.sh` 自动对齐配置并自检连通性。开发模式下默认使用 `8080` 作为文件 URL 端口，`scripts/dev_proxy_8080.py` 会将 `/group1/M00/...` 映射到本机 FastDFS 数据目录（默认 `/home/fastdfs/storage/data`）。
+| shorturl-server（gRPC） | 50051 | `shorturl/shorturl-server/dev.config.yaml` |
+| shorturl-proxy（HTTP 302） | 8082 | `shorturl/shorturl-proxy/dev.config.yaml` |
+
+FastDFS、`storage_web_server_*` 等见 `tc_http_server.conf`；推荐先执行 `./scripts/configure-fastdfs.sh` 自动对齐配置并自检连通性。开发模式下默认使用 `8080` 作为文件 URL 端口，`scripts/dev_proxy_8080.py` 会将 `/group1/M00/...` 映射到本机 FastDFS 数据目录（默认 `/home/fastdfs/storage/data`），并将 `/p/*` 转发到 shorturl-proxy（8082）实现短链 302 跳转。
+
+---
+
+## 短链服务
+
+`tc_http_server.conf` 中 **`enable_shorturl=1`** 时，上传文件后 C++ 后端会通过 **gRPC** 调用 `shorturl-server`（Go，50051）生成短链 key；分享图片浏览时返回的图片 URL 也会优先转为短链。浏览器访问短链时，`dev_proxy_8080.py` 将 `/p/:key` 转发到 `shorturl-proxy`（Go，8082），后者通过 gRPC 查询原始 URL 并 **302 重定向**到 FastDFS 文件地址。
+
+### 启动短链
+
+```bash
+./scripts/run-shorturl.sh
+```
+
+该脚本会自动完成：导入 shorturl 数据库 → 编译 shorturl-server → 启动 50051 → 编译 shorturl-proxy → 启动 8082。
+
+### 短链效果
+
+分享图片后，通过短链地址即可在浏览器中直接查看图片：
+
+![短链分享图片浏览](display/短链.png)
+
+---
+
+## 后端上传验证（curl）
+
+前端 UI 上传偶尔会因浏览器 FormData 组装问题失败（`post_data` 过小），这是**前端原始代码 bug**（Upload 组件 `fileList` 状态未同步），不影响后端链路。可用以下 curl 命令直接验证后端上传全链路正常：
+
+```bash
+# 直连后端 8081 上传（绕过前端），验证 FastDFS + MySQL + 短链 全链路
+curl -X POST "http://127.0.0.1:8081/api/upload" \
+  -F "user=orange" \
+  -F "md5=$(md5sum display/页面.png | cut -d' ' -f1)" \
+  -F "size=$(stat -c%s display/页面.png)" \
+  -F "file=@display/页面.png"
+```
+
+返回 `{"code":0}` 即表示上传成功（文件已入 FastDFS，元数据已写入 MySQL）。若返回 `{"code":1}`，请检查 FastDFS 连通性与数据库状态。
 
 ---
 

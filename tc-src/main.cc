@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
     // 或者至少忽略它，因为程序接收到SIGPIPE信号的默认行为是结束进程，而我们绝对不希望因为错误的写操作而导致程序退出。
     // SIG_IGN 忽略信号的处理程序
     signal(SIGPIPE, SIG_IGN); //忽略SIGPIPE信号
+    srand(static_cast<unsigned>(time(nullptr)));
     int ret = 0;
     char *str_tc_http_server_conf = NULL;
     if(argc > 1) {

@@ -240,9 +240,39 @@ class ProxyHandler(BaseHTTPRequestHandler):
             return None
         return p if p.is_file() else None
 
+    shorturl_proxy_host: str = "127.0.0.1"
+    shorturl_proxy_port: int = 8082
+
+    def _proxy_shorturl(self) -> None:
+        """将 /p/:key 请求转发到 shorturl-proxy (8082)，实现短链 302 跳转。"""
+        try:
+            conn = http.client.HTTPConnection(
+                self.shorturl_proxy_host, self.shorturl_proxy_port, timeout=10
+            )
+            headers = {
+                k: v
+                for k, v in self.headers.items()
+                if not _hop_by_hop(k)
+            }
+            conn.request(self.command, self.path, headers=headers)
+            resp = conn.getresponse()
+            data = resp.read()
+            self.send_response(resp.status)
+            for h, v in resp.getheaders():
+                if not _hop_by_hop(h):
+                    self.send_header(h, v)
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(data)
+        except OSError as e:
+            self.send_error(502, f"shorturl-proxy unreachable: {e}")
+
     def do_GET(self) -> None:
         if self.path.startswith("/api"):
             self._proxy()
+            return
+        if self.path.startswith("/p/") or self.path.startswith("/u/"):
+            self._proxy_shorturl()
             return
         u = urllib.parse.urlparse(self.path)
         path = urllib.parse.unquote(u.path)

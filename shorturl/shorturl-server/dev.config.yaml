@@ -16,7 +16,7 @@ mysql:
   maxOpenConn: 10
   maxIdleConn: 10
 # 短链的起始地址，如果有域名则把ip换成域名
-shortDomain:  http://192.168.1.27/p/
+shortDomain:  http://192.168.217.135:8080/p/
 # 短链的公共调用的地址，如果有域名则把ip换成域名，这行先不用关注，目前没有在图床使用
 userShortDomain: http://192.168.1.27/u/
 log:
