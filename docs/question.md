@@ -888,7 +888,7 @@ flowchart LR
     A --> R[(Redis)]
     A --> T[FastDFS Tracker]
     T --> S[FastDFS Storage]
-    A --> G[Go ShortURL 服务(gRPC)]
+    A --> G[Go ShortURL 服务_gRPC]
 ```
 
 ### 图 2：上传链路（控制面与数据面分离，对应题 13/19/26）
