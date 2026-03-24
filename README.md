@@ -120,6 +120,7 @@ my_tuchuang/
 ├── tuchuang_clear.sql        # 清空业务表（慎用）
 ├── nginx.conf                # 生产部署可参考的 Nginx 示例
 ├── display/                  # 运行界面截图（自行放入，见下文「运行界面展示」）
+├── wrk/                      # wrk 压测工具源码 + Lua 脚本（上传 multipart 等）
 ├── scripts/
 │   ├── run-dev-8080.sh       # 推荐：一键起后端 8081 + 8080 静态与 /api 反代
 │   ├── docker-stack.sh       # 统一调用 docker compose 或 docker-compose
@@ -347,6 +348,9 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 | `display/05-share.png` | 分享或图床相关页面（若有） |
 | `display/06-dev-proxy.png` | 终端中 `run-dev-8080.sh` 或 Docker 运行状态（可选） |
 | `display/mysql.png` | MySQL 运行结果（可选） |
+| `display/wrk_png.png` | wrk 压测：场景一（8081 上传 `页面.png`）终端输出 |
+| `display/wrk_txt.png` | wrk 压测：场景二（8081 上传随机 txt）终端输出 |
+| `display/wrk_10000.png` | wrk 压测：场景三（8080 万级并发静态首页）终端输出 |
 
 在图片放入对应路径后，以下引用即可正常显示：
 
@@ -363,6 +367,140 @@ docker exec -it tuchuang-redis redis-cli -n 0 ZCARD FILE_PUBLIC_ZSET
 ![开发环境终端](display/06-dev-proxy.png)
 
 ![MySQL运行结果](display/mysql.png)
+
+![wrk 场景一：8081 上传页面.png](display/wrk_png.png)
+
+![wrk 场景二：8081 上传随机 txt](display/wrk_txt.png)
+
+![wrk 场景三：8080 万级并发静态首页](display/wrk_10000.png)
+
+---
+
+## 性能压测（wrk）
+
+仓库内 **`wrk/`** 为 [wrk](https://github.com/wg/wrk) 源码。上传压测使用 **`wrk/scripts/upload_multipart.lua`**：按 `tc-src/api/api_upload.cc` 中「浏览器直传」分支组 **`multipart/form-data`**，字段为 **`user`、`md5`、`size`、`file`**。**QPS** 取 wrk 汇总中的 **Requests/sec**（上传脚本结束时 stderr 中的 **qps** 与其一致）；**P99** 取 **`--latency`** 输出里 **Latency Distribution → 99%**，或与脚本中的 **`latency_p99_ms`** 对照。
+
+**准备**：首次编译 `./wrk/wrk`；上传压测需 **`127.0.0.1:8081`** 上 `tc_http_server`、FastDFS、MySQL、Redis 已就绪。万级并发前建议在压测机执行 **`ulimit -n 65535`**（或更大）。可选一键上传对比：`./wrk/scripts/bench-upload.sh`（环境变量见脚本注释）。
+
+```bash
+cd wrk && make -j"$(nproc 2>/dev/null || echo 4)"
+```
+
+下文三组数据均在 **同一 VM / 单机** 上复现，**彼此不可混成同一个数字**：场景一、二为 **8081 全链路上传**；场景三为 **8080 静态首页**、**万级并发**，与上传吞吐不是同一类指标。与本节对应的终端截图见 **`display/wrk_png.png`**、**`wrk_txt.png`**、**`wrk_10000.png`**（亦在「运行界面展示」中引用）。
+
+### 场景一：8081 上传 `display/页面.png`
+
+**场景说明**：直连业务端口 **`127.0.0.1:8081`**，payload 为 **`display/页面.png`（约 177KB 级 PNG）**，考察 **FastDFS + 落库** 等全链路在固定并发下的 **QPS** 与 **P99**。表单里的 **md5** 须与文件内容一致。
+
+**命令**（在仓库根目录）：
+
+```bash
+F="$PWD/display/页面.png"
+M=$(md5sum "$F" | awk '{print $1}')
+./wrk/wrk -t4 -c200 -d30s --latency -s wrk/scripts/upload_multipart.lua http://127.0.0.1:8081 -- "$F" bench_wrk "$M" "页面.png"
+```
+
+**结果**：
+
+```text
+Running 30s test @ http://127.0.0.1:8081
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   336.30ms  162.92ms   1.72s    87.86%
+    Req/Sec    66.86     35.48   220.00     66.40%
+  Latency Distribution
+     50%  280.79ms
+     75%  351.35ms
+     90%  536.62ms
+     99%  939.80ms
+  7778 requests in 30.06s, 0.88MB read
+Requests/sec:    258.75
+Transfer/sec:     30.07KB
+
+---- upload_multipart.lua ----
+qps: 258.75
+latency_p99_ms: 939.804
+http_status_errors: 0
+```
+
+**分析**：在 **`-t4 -c200 -d30s`** 下，该 PNG 全量上传约 **259 QPS**；**P99 ≈ 940ms**，中位与 P90 也在数百毫秒量级，符合「读 body → 临时文件 → FastDFS → MySQL」的重路径。**`http_status_errors: 0`** 表示无 HTTP **≥400**，业务是否全部成功仍以返回 JSON 为准（脚本未解析 body）。
+
+### 场景二：8081 上传随机 txt（multipart）
+
+**场景说明**：与场景一相同 **wrk 与并发**，仅更换 payload：先 **`head -c 65536 /dev/urandom | base64`** 写入 **`wrk/tmp/wrk_random.txt`**，multipart 体积大于 **64KB 原始随机数据**对应的大小，用于和 **PNG** 对比「包体形态/体积」对上传 **QPS**、**P99** 的影响。
+
+**命令**：
+
+```bash
+mkdir -p wrk/tmp
+head -c 65536 /dev/urandom | base64 > wrk/tmp/wrk_random.txt
+R="$PWD/wrk/tmp/wrk_random.txt"
+MR=$(md5sum "$R" | awk '{print $1}')
+./wrk/wrk -t4 -c200 -d30s --latency -s wrk/scripts/upload_multipart.lua http://127.0.0.1:8081 -- "$R" bench_wrk "$MR" "wrk_random.txt"
+```
+
+**结果**：
+
+```text
+Running 30s test @ http://127.0.0.1:8081
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   372.40ms  163.22ms   1.59s    88.46%
+    Req/Sec    61.45     37.36   242.00     68.26%
+  Latency Distribution
+     50%  322.84ms
+     75%  405.82ms
+     90%  542.87ms
+     99%  908.98ms
+  2669 requests in 30.08s, 310.17KB read
+Requests/sec:     88.73
+Transfer/sec:     10.31KB
+
+---- upload_multipart.lua ----
+qps: 88.73
+latency_p99_ms: 908.975
+http_status_errors: 0
+```
+
+**分析**：同样 **200 并发**，随机 txt 场景 **QPS 明显低于** 场景一 PNG（约 **89** 对 **259**），**P99 仍在约 0.91s**，与场景一同一量级。差异主要来自 **单次请求体更大、编码与磁盘/存储压力不同**，说明**上传 QPS 必须绑定「文件类型与大小、并发」** 再写结论。
+
+### 场景三：万级并发 + 8080 静态 `index.html`
+
+**场景说明**：压 **`scripts/dev_proxy_8080.py`** 提供的 **`http://127.0.0.1:8080/index.html`**，**`-c10000`** 表示 wrk 侧维持 **1 万条并发连接**，用于观察**开发入口静态链路**在极高并发下的 **QPS**、**延迟分布**与 **超时**。**不宜**用同一 `-c` 直接打超大 multipart 上传（易先打满磁盘与存储）。
+
+**命令**：
+
+```bash
+ulimit -n 65535
+./wrk/wrk -t16 -c10000 -d60s --timeout 10s --latency http://127.0.0.1:8080/index.html
+```
+
+**结果**：
+
+```text
+Running 1m test @ http://127.0.0.1:8080/index.html
+  16 threads and 10000 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    24.93ms  241.75ms   8.06s    98.34%
+    Req/Sec   275.47    256.88     2.91k    77.70%
+  Latency Distribution
+     50%    2.00ms
+     75%    2.49ms
+     90%    3.12ms
+     99%  419.64ms
+  206649 requests in 1.00m, 623.15MB read
+  Socket errors: connect 0, read 0, write 0, timeout 180
+Requests/sec:   3438.48
+Transfer/sec:     10.37MB
+```
+
+**分析**：**Requests/sec ≈ 3438**，即该条件下静态首页 **QPS**；**P99 ≈ 420ms**，而 **P50 / P90 约 2ms / 3ms**，长尾显著。**`timeout 180`** 表示 **180** 次请求在 **`--timeout 10s`** 内仍未结束，写材料时应**主动披露**，避免被读成「零失败」。若生产前经 **Nginx**，需保证 **`worker_connections`** 等不低于目标并发，并把 URL 换成实际站点路径后再复测。
+
+### 压测成果摘要（基于上述实测）
+
+> **成果展示**：在单机 VM 上用 wrk 复现，**8080 静态首页在 1 万并发下约 3438 QPS、P99≈0.42s（含 180 次 10s 超时）**；**8081 全链路上传在 200 并发下，`display/页面.png` 约 259 QPS、P99≈0.94s，同条件大包体随机 txt 约 89 QPS、P99≈0.91s**——静态高并发与上传吞吐须分项表述，且均依赖本文命令与场景方可复现。
+
+补充：上传 QPS 随 **文件大小与类型** 变化显著；万级并发场景针对 **轻量 GET**，与 multipart 上传的瓶颈不同。若经 **Nginx** 或更换机器，需按相同结构重新跑命令并替换文中的结果表。
 
 ---
 
