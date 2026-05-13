@@ -1,5 +1,5 @@
 /**
- * tc_http_server —— 图床业务 HTTP 后端（零声课程配套）
+ * tc_http_server
  *
  * 在整体架构中的位置：
  * - 浏览器 → Nginx(80)：静态页 tc-front、/api/* 反代、大文件上传走 upload 模块落盘再转给本服务
